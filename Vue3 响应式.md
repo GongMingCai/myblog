@@ -174,4 +174,97 @@ console.log(sum)   // 3
 val1.value = 3
 console.log(sum)   // 5
 ```
-至此，我们就完成了一个基础的响应式实现。  
+至此，我们就完成了一个基础的响应式实现。回头看我们调用 `ref` API 的初衷是为了解决简单数据无法追踪变化源和通知更新的问题。如果我们的数据源原本就是对象，自然就不需要 `ref` 再做一层包装，这个时候 [Proxy](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Proxy) 对象代理就该上场了。  
+
+<br />
+
+# 响应式对象 
+>`Proxy` 对象用于创建一个对象的代理，从而实现基本操作的拦截和自定义（如属性查找、赋值、枚举、函数调用等）。    
+
+Vue3 的 `reactive` API 就是基于 `Proxy` 的实现，它可以将对象进行深度响应式转换。下面就让我们来实现一个基本的 `reactive`。  
+
+在开始之前，先对之前的求和示例进行修改，将数据源由基本类型调整为对象类型。  
+```js
+let data = {
+  val1: 1,
+  val2: 2
+}
+
+let sum = data.val1 + data.val2
+console.log(sum)
+
+data.val1 = 3
+console.log(sum)
+```
+
+通过 `Proxy` 拦截对象属性设置和读取的操作，添加追踪依赖和通知更新的自定义行为。  
+
+```js
+const proxyMap = new WeakMap()
+const targetMap = new WeakMap()
+
+export function reactive(target) {
+  const proxy = new Proxy(target, {
+    get(target, key, receiver) {
+      const res = Reflect.get(target, key, receiver)
+      track(target, key)
+      return res
+    },
+    set(target, key, value, receiver) {
+      const oldValue = target[key]
+      const res = Reflect.set(target, key, value, receiver)
+      if (value !== oldValue) {
+        trigger(target, key)
+      }
+      return res
+    }
+  })
+  proxyMap.set(target, proxy)
+  return proxy
+}
+
+// 依赖收集
+function track(target, key) {
+  let depsMap = targetMap.get(target)
+  if (!depsMap) {
+    targetMap.set(target, (depsMap = new Map()))
+  }
+  let dep = depsMap.get(key)
+  if (!dep) {
+    depsMap.set(key, (dep = new Set()))
+  }
+  dep.add(activeEffect)
+}
+
+// 通知更新
+function trigger(target, key) {
+  const depsMap = targetMap.get(target)
+  if (!depsMap) {
+    return
+  }
+  const deps = depsMap.get(key)
+  if (!deps) {
+    return
+  }
+  for (const effect of deps) {
+    effect()
+  }
+}
+```
+
+现在，我们用下面的示例来验证 `reactive` 响应式是否生效。  
+```js
+let data = reactive({
+  val1: 1,
+  val2: 2
+})
+let sum
+const sumUpdateEffect = effect(() => {
+  sum = data.val1 + data.val2
+})
+console.log(sum)  // 3
+
+data.val1 = 3
+console.log(sum)  // 5
+```
+
