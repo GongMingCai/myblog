@@ -50,7 +50,7 @@ console.log(refObj)
 
 ![RefImpl](./assets/RefImpl.jpg)
 
-这里的 `_rawValue` 、 `_value` 和 `value` 都和原始值相同，但在 Vue 中约定以下划线开头的都是内部私有属性，所以暂且让我们将关注点聚焦到 `value` 上。  
+这里的 `_rawValue` 、 `_value` 和 `value` 都和原始值相同，一般会约定以下划线开头的都是内部私有属性，所以暂且让我们将关注点聚焦到 `value` 上。  
 
 这一步的最终目标是在获取对象属性值的时候对其进行追踪。  
 
@@ -87,7 +87,7 @@ function track(ref) {
   ref.dep.add(activeEffect)
 }
 ```
-通过追踪我们将 `value` 属性和 `activeEffect` 记录在了一起，这样我们就知道了 `value` 是当前副作用的依赖。  
+在获取 `value` 值时调用 `track`，将副作用添加到 `ref` 包装对象的 `dep` 属性中，这里的依赖使用 `Set` 保存以避免重复添加，通过追踪我们将 `value` 属性和 `activeEffect` 记录在了一起，这样我们就知道了 `value` 是当前副作用的依赖。  
 
 <br/>
 
@@ -118,6 +118,7 @@ function trigger(ref) {
   }
 }
 ```
+通知更新时会遍历对象的依赖 - 副作用，并执行。
 
 <br />
 
@@ -174,7 +175,11 @@ console.log(sum)   // 3
 val1.value = 3
 console.log(sum)   // 5
 ```
-至此，我们就完成了一个基础的响应式实现。回头看我们调用 `ref` API 的初衷是为了解决简单数据无法追踪变化源和通知更新的问题。如果我们的数据源原本就是对象，自然就不需要 `ref` 再做一层包装，这个时候 [Proxy](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Proxy) 对象代理就该上场了。  
+至此，我们就完成了一个基础的响应式实现。完整的代码实现[在这里](./code/ref.js)。  
+
+回头看我们调用 `ref` API 的初衷是为了解决诸如 `Number` 这样的原始类型数据无法追踪变化源和通知更新的问题。如果我们的数据源原本就是对象，自然就不需要 `ref` 再做一层包装，那又该如何实现响应式呢？  
+
+这个时候 [Proxy](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Proxy) 对象代理就该上场了。  
 
 <br />
 
@@ -199,11 +204,17 @@ console.log(sum)
 
 通过 `Proxy` 拦截对象属性设置和读取的操作，添加追踪依赖和通知更新的自定义行为。  
 
+在 get/set 拦截器中，分别通过 `Reflect.get`  和 `Reflect.set` 完成默认的对象属性读取和设置行为，`Reflect` 是 ES6 中引入的内置对象，它拥有与 `Object` 相同的方法，但存在一些细微的区别，具体可参考 [Reflect 与 Object 的对比](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Reflect/Comparing_Reflect_and_Object_methods)。  
 ```js
 const proxyMap = new WeakMap()
 const targetMap = new WeakMap()
 
 export function reactive(target) {
+  const existingProxy = proxyMap.get(target)
+  if (existingProxy) {
+    // 如果目标对象已经被代理直接返回
+    return existingProxy
+  }
   const proxy = new Proxy(target, {
     get(target, key, receiver) {
       const res = Reflect.get(target, key, receiver)
@@ -222,7 +233,10 @@ export function reactive(target) {
   proxyMap.set(target, proxy)
   return proxy
 }
+```
 
+在读取对象属性时，需要进行 `track`（依赖收集）操作，每个属性都各自有一份依赖集合，属性名 - `key` 和对应的依赖集合 `Set` 就构成了对象的完整依赖 - `depsMap`，`targetMap` 作为全局对象保存了全部响应式对象的依赖。
+```js
 // 依赖收集
 function track(target, key) {
   let depsMap = targetMap.get(target)
@@ -235,7 +249,10 @@ function track(target, key) {
   }
   dep.add(activeEffect)
 }
+```
 
+同样地，在设置对象属性时，需要进行 `trigger`（通知更新）操作，遍历执行属性的依赖 - `effect`。
+```js
 // 通知更新
 function trigger(target, key) {
   const depsMap = targetMap.get(target)
@@ -267,4 +284,4 @@ console.log(sum)  // 3
 data.val1 = 3
 console.log(sum)  // 5
 ```
-
+符合预期结果。完整的代码实现[在这里](./code/reactivity.js)。  
