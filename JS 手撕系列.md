@@ -59,7 +59,32 @@ const curriedSum = curry(sum);
 console.log(curriedSum(1)(2)(3));   // 6
 ```
 
+这里的柯里化函数每次只能处理一个参数，然而在 [lodash](https://lodash.com/docs/4.17.15#curry) 这样的库中关于柯里化有更高级的实现 - 可以处理多个参数。  
 
+```js
+const curriedSum = _.curry(sum);
+// 单个参数
+curriedSum(1)(2)(3);   // 6
+// 多个参数
+curriedSum(1, 2)(3);   // 6
+curriedSum(1, 2,3);    // 6
+```
+
+对于多参数的处理，我们稍作处理即可。  
+```js
+function curry(fn) {
+  return function curried(...args) {
+    if (args.length >= fn.length) {
+      return fn.apply(this, args);
+    } else {
+      // args2 接收多个参数
+      return function (...arg2) {
+        return curried.apply(this, args.concat(args2));
+      };
+    }
+  };
+}
+```
 
 
 
