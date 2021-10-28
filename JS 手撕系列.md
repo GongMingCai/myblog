@@ -78,7 +78,7 @@ function curry(fn) {
       return fn.apply(this, args);
     } else {
       // args2 接收多个参数
-      return function (...arg2) {
+      return function (...args2) {
         return curried.apply(this, args.concat(args2));
       };
     }
@@ -226,3 +226,35 @@ const obj = {
 showProfileMessage.myApply(obj, ["Bye", "Bye"]); // Bye Bye Mingcai Gong
 ```
 符合预期结果，ES6 版本的代码实现[在这里](./code/myApply.es6.js)。  
+
+# bind
+`bind()` 方法创建一个新的函数，在 `bind()` 被调用时，这个新函数的 `this` 被指定为 `bind()` 的第一个参数，而其余参数将作为新函数的参数，供调用时使用。  
+
+与 `call` 和 `apply` 不同的是，`bind` 不会调用原始函数（被绑定的函数），而是返回一个新的函数。另外，`bind` 可以向绑定函数（创建的新函数）传递预设的初始参数，这些参数会被插入到绑定函数的参数列表的开始位置，传递给绑定函数的参数会跟在它们后面，这其实就是偏函数。  
+
+```js
+Function.prototype.myBind = function (context) {
+  const fn = this;
+  const args = Array.prototype.slice.call(arguments, 1);
+  return function () {
+    const args2 = Array.prototype.slice.call(arguments);
+    fn.apply(context, args.concat(args2));
+  };
+};
+```
+让我们来验证下吧。
+```js
+this.x = 0;
+var module = {
+  x: 1,
+  getX: function () {
+    console.log(this.x);
+  },
+};
+var retrieveX = module.getX;
+retrieveX(); // 0
+
+var boundGetX = retrieveX.myBind(module);
+boundGetX(); // 1
+```
+符合预期结果，ES6 版本的代码实现[在这里](./code/myBind.es6.js)。  
