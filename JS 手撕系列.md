@@ -193,3 +193,36 @@ const obj = {
 showProfileMessage.myCall(obj, "Bye Bye"); // Bye Bye Mingcai Gong
 ```
 符合预期结果，ES6 版本的代码实现[在这里](./code/myCall.es6.js)。  
+
+
+# apply
+`apply()` 方法的作用和 `call()` 方法类似，区别就是 `call()` 方法接受的是参数列表，而 `apply()` 方法接受的是一个参数数组。  
+
+`apply` 的实现与 `call` 类似。区别在于我们不再需要借助 `arguments` 来处理参数。  
+```js
+Function.prototype.myApply = function(context, argArr) {
+  var uniqueID = "00" + Math.random();
+  while (context.hasOwnProperty(uniqueID)) {
+    uniqueID = "00" + Math.random();
+  }
+  context[uniqueID] = this;
+  var args = [];
+  for (var i = 0; i < argArr.length; i++) {
+    args.push("argArr[" + i + "]");
+  }
+  var result = eval("context[uniqueID](" + args + ")");
+  delete context[uniqueID];
+  return result;
+}
+```
+让我们来验证下吧。  
+```js
+function showProfileMessage(firstMsg, secMsg) {
+  console.log(firstMsg, secMsg, this.name);
+}
+const obj = {
+  name: "Mingcai Gong",
+};
+showProfileMessage.myApply(obj, ["Bye", "Bye"]); // Bye Bye Mingcai Gong
+```
+符合预期结果，ES6 版本的代码实现[在这里](./code/myApply.es6.js)。  
