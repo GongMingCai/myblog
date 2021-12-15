@@ -258,3 +258,12 @@ var boundGetX = retrieveX.myBind(module);
 boundGetX(); // 1
 ```
 符合预期结果，ES6 版本的代码实现[在这里](./code/myBind.es6.js)。  
+
+# Promise
+对于 `Promise` 的认识，最深刻的恐怕就是其为解决传统的回调函数异步编程方案的弊端 - 回调地狱。  
+
+Promise 最早是由社区提出的，并且形成了统一的规范 [Promise/A+](https://promisesaplus.com/)。  
+
+ES6 将其写入了自己的语言规范，为我们提供了原生的 Promise 对象，具体可以参考阮一峰大神的 [ES6入门教程](https://es6.ruanyifeng.com/#docs/promise)。  
+
+本节，我们要探讨的不是如何使用 `Promise`, 而是要根据 `Promise/A+` 规范实现自己的 `Promise`, 并提供类似于 ES6 原生 `Promise` 的 API。  
