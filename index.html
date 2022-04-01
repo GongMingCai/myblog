@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      /**
+       * new 的实现
+       */
+      const selfNew = function (constructor, ...args) {
+        if (typeof constructor !== "function") {
+          throw new Error("constructor is not a function");
+        }
+        const instance = Object.create(constructor.prototype); // res.__proto__ = constructor.prototype
+        const res = constructor.apply(instance, args); // 构造函数有返回值
+        return typeof res === "object" && res !== null ? res : instance;
+      };
+
+      /**
+       * call 实现
+       */
+      Function.prototype.selfCall = function (context, ...args) {
+        if (typeof this !== "function") {
+          throw new Error("this is not a function");
+        }
+        const fn = this;
+        context || (context = window);
+        const caller = Symbol("caller"); // 保证对象属性的唯一性
+        context[caller] = fn; // 隐式绑定 this
+        const res = context[caller](...args);
+        delete context[caller]; // 删除对象属性
+        return res;
+      };
+
+      /**
+       * apply 实现（与 call 类似，区别在于 args 为数组）
+       */
+      Function.prototype.selfApply = function (context, args) {
+        if (typeof this !== "function") {
+          throw new Error("this is not a function");
+        }
+        const fn = this;
+        context || (context = window);
+        const caller = Symbol("caller"); // 保证对象属性的唯一性
+        context[caller] = fn; // 隐式绑定 this
+        const res = context[caller](...args);
+        delete context[caller]; // 删除对象属性
+        return res;
+      };
+
+      /**
+       * bind 实现（借助 apply）
+       */
+      Function.prototype.selfBind = function (context, ...args) {
+        if (typeof this !== "function") {
+          throw new Error("this is not a function");
+        }
+        const fn = this;
+        context || (context = window);
+        const bindFn = function (...newArgs) {
+          return fn.apply(this instanceof bindFn ? this : context, [
+            ...args,
+            ...newArgs,
+          ]);
+        }; // 处理绑定函数作为构造函数使用，通过 bind 绑定的 this 被忽略
+        return bindFn;
+      };
+
+      /**
+       * map 实现
+       */
+      Array.prototype.selfMap = function (callback, thisArg) {
+        if (typeof callback !== "function") {
+          throw new Error("callback is not a function");
+        }
+        const arr = this;
+        const len = arr.length;
+        const res = new Array(len);
+        let i = 0;
+        let cur;
+        while (i < len) {
+          cur = arr[i];
+          res[i] = callback.call(thisArg, cur, i, arr);
+          i++;
+        }
+        return res;
+      };
+
+      /**
+       * filter 实现
+       */
+      Array.prototype.filter = function (callback, thisArg) {
+        if (typeof callback !== "function") {
+          throw new Error("callback is not a function");
+        }
+        const arr = this;
+        const len = arr.length;
+        const res = [];
+        let i = 0;
+        let cur;
+        while (i < len) {
+          cur = arr[i];
+          // 处理未赋值的索引
+          if (arr.hasOwnProperty(i) && callback.call(thisArg, cur, i, arr)) {
+            res.push(cur);
+          }
+          i++;
+        }
+
+        /**
+         * reduce 实现
+         */
+        Array.prototype.reduce = function (callback, initialValue) {
+          if (typeof callback !== "function") {
+            throw new Error("callback is not a function");
+          }
+          const arr = this;
+          const len = arr.length;
+          let i, accu;
+          if (initialValue) {
+            accu = initialValue;
+            i = 0;
+          } else {
+            accu = arr[0];
+            i = 1;
+          }
+          while (i < len) {
+            accu = callback(accu, arr[i], i, arr);
+            i++;
+          }
+          return accu;
+        };
+
+        /**
+         * 深拷贝实现
+        */
+       function deepClone() {
+         
+       }
+      };
+    </script>
+
+    <script></script>
+  </body>
+</html>
